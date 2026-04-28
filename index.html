@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Implicit Association Test</title>
+        <script src="jspsych/jspsych.js"></script>
+        <script src="jspsych/plugin-survey-text.js"></script>
+        <script src="jspsych/plugin-html-keyboard-response.js"></script>
+        <script src="jspsych/plugin-iat-html.js"></script>
+        <script src="jspsych/plugin-iat-image.js"></script>
+        <script src="jspsych/plugin-preload.js"></script>
+        <link href="jspsych/jspsych.css" rel="stylesheet" type="text/css" />
+    </head>
+  <body></body>
+<!-- Allow remote storage on Google Firebase -->
+<!-- The core Firebase JS SDK is always required and must be listed first -->
+<script src="https://www.gstatic.com/firebasejs/7.12.0/firebase-app.js"></script>
+    
+<!-- TODO: Add SDKs for Firebase products that you want to use
+https://firebase.google.com/docs/web/setup#available-libraries -->
+<script src="https://www.gstatic.com/firebasejs/7.12.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/7.12.0/firebase-database.js"></script>
+
+<!--enter some javascript code-->
+<script type="text/javascript">
+
+    //Firebase set up
+    const firebaseConfig = {
+        apiKey: "AIzaSyBL6_rjTMklznQUS8wUa64M2KG5wqCVsHs",
+        authDomain: "jspsych-online-experiment.firebaseapp.com",
+        databaseURL: "https://jspsych-online-experiment-default-rtdb.firebaseio.com",
+        projectId: "jspsych-online-experiment",
+        storageBucket: "jspsych-online-experiment.firebasestorage.app",
+        messagingSenderId: "1079706142",
+        appId: "1:1079706142:web:83f4f2ef0e0ff50a66240f"
+    };
+
+    //initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+
+    //get a reference to the database service
+    var database = firebase.database();
+
+    //login anonynous user
+    firebase.auth().signInAnonymously().catch(function(error) {
+        //error handling
+        var errorCode = error.code;
+        var errorMessage = error.message;
+    });
+
+    // check user can sign on to firebase
+    firebase.auth().onAuthStateChanged(function(user) {
+        if (user) {
+            // user is signed in
+            var isAnonymous = user.isAnonymous;
+            var uid = user.uid;
+        } else {
+            //user is signed out
+        }
+    });
+
+    //participant input ID
+    var participant_input_id = null;
+    //record condition
+    var condition = "version_boyGOOD"; 
+
+    //initiaize jsPsych
+    var jsPsych = initJsPsych({
+        on_finish: function (){
+        // get all data from jsPsych
+            var data = jsPsych.data.get().values();
+
+            // save to Firebase
+            database.ref("participants").push({
+                subject: subject_id,
+                participant_id: participant_input_id,
+                condition: condition,
+                data: data,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            })
+            .then(() => {
+                console.log("Data saved to Firebase successfully!");
+            })
+            .catch((error) => {
+                console.error("Error saving to Firebase:", error);
+            });
+        }
+    });
+
+    //anoynous subject_id
+    var subject_id = jsPsych.randomization.randomID(15); //Firebase
+    console.log(subject_id);
+    jsPsych.data.addProperties({
+        subject: subject_id
+    });
+
+    //Create Timeline
+    var timeline = [];
+
+    //Fixation Trial
+    var fixation = {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: '<div style="font-size:60px;">+</div>',
+        choices: "NO_KEYS",
+        trial_duration: 250,
+        data: {task:'fixation'}
+    };
+
+   //Preload images
+    var preload = {
+        type: jsPsychPreload,
+        images: [
+            'img/A_G_3_S_006.png',
+            'img/B_G_3_S_002.png',
+            'img/l_g_3_s_009.png',
+            'img/W_G_3_S_003.png',
+            'img/A_B_3_S_004.png',
+            'img/B_B_3_S_008.png',
+            'img/l_b_3_s_010.png',
+            'img/W_B_3_S_002.png',
+            'img/miracle.jpg',
+            'img/lucky.jpg',
+            'img/laughter.jpg',
+            'img/gift.jpg',
+            'img/ugly.jpg',
+            'img/tragedy.jpg',
+            'img/grief.jpg',
+            'img/hatred.jpg'
+        ]
+    };
+    timeline.push(preload);
+
+    //Stimulus definitions
+    var targets = [
+        {stimulus:'img/A_G_3_S_006.png', category:'girl', type:'picture'},
+        {stimulus:'img/B_G_3_S_002.png', category:'girl', type:'picture'},
+        {stimulus:'img/l_g_3_s_009.png', category:'girl', type:'picture'},
+        {stimulus:'img/W_G_3_S_003.png', category:'girl', type:'picture'},
+        {stimulus:'img/A_B_3_S_004.png', category:'boy', type:'picture'},
+        {stimulus:'img/B_B_3_S_008.png', category:'boy', type:'picture'},
+        {stimulus:'img/l_b_3_s_010.png', category:'boy', type:'picture'},
+        {stimulus:'img/W_B_3_S_002.png', category:'boy', type:'picture'}
+    ];
+    var attributes = [
+        {stimulus:'img/miracle.jpg', category:'GOOD', type:'word'},
+        {stimulus:'img/lucky.jpg', category:'GOOD', type:'word'},
+        {stimulus:'img/laughter.jpg', category:'GOOD', type:'word'},
+        {stimulus:'img/gift.jpg', category:'GOOD', type:'word'},
+        {stimulus:'img/ugly.jpg', category:'BAD', type:'word'},
+        {stimulus:'img/tragedy.jpg', category:'BAD', type:'word'},
+        {stimulus:'img/grief.jpg', category:'BAD', type:'word'},
+        {stimulus:'img/hatred.jpg', category:'BAD', type:'word'}
+    ];
+
+    //Generic IAT trial template
+    var iat_trial = {
+        type: jsPsychIatImage,
+        stimulus: jsPsych.timelineVariable('stimulus'),
+        stimulus_category: jsPsych.timelineVariable('category'),
+        stimulus_duration: null,
+        post_trial_gap: 250,
+
+        left_category_key: 'e',
+        right_category_key: 'i',
+        
+        left_category_label: jsPsych.timelineVariable('left_label'),
+        right_category_label: jsPsych.timelineVariable('right_label'),
+        stim_key_association: jsPsych.timelineVariable('correct_side'),
+        
+        html_when_wrong: '<span style="color:red;font-size:80px">X</span>',
+        display_feedback: true,
+        force_correct_key_press: true,
+        response_ends_trial: true,
+        
+        data:{
+            block: jsPsych.timelineVariable('block'),
+            category: jsPsych.timelineVariable('category'),
+            stim_type: jsPsych.timelineVariable('stim_type')
+        }
+    };
+
+    //Helper function to create blocks
+    function createIATBlock(stimuli, left_labels, right_labels, block_number, repetitions){
+
+        function shuffleNoRepeat(stimuli, previous_order){
+            var shuffled;
+            do{
+                shuffled = jsPsych.randomization.shuffle(stimuli.slice());
+            } while(
+                previous_order && 
+                JSON.stringify(shuffled.map(s=>s.stimulus)) === 
+                JSON.stringify(previous_order.map(s=>s.stimulus))
+            );
+            return shuffled;
+        }
+
+        var vars = [];
+        var previous_shuffle = null;
+        for(let r=0; r<repetitions; r++){
+            var shuffled = shuffleNoRepeat(stimuli, previous_shuffle);
+            previous_shuffle = shuffled;
+            shuffled.forEach(function(stim){
+
+                var side;
+
+                if(left_labels.includes(stim.category)){
+                    side = "left";
+                }else{
+                    side = "right";
+                }
+
+                vars.push({
+                    stimulus: stim.stimulus,
+                    category: stim.category,
+                    correct_side: side,
+                    left_label: left_labels,
+                    right_label: right_labels,
+                    block: block_number,
+                    stim_type: stim.type
+                });
+            });
+        }
+        
+        return {
+            timeline:[iat_trial],
+            timeline_variables: vars,
+            randomize_order:true
+        };
+    }
+
+    function createAlternatingMixedBlock(pictures, words, left_labels, right_labels, block_number, repetitions){
+
+        function shuffleNoRepeat(stimuli, previous_order){
+            var shuffled;
+            do{
+                shuffled = jsPsych.randomization.shuffle(stimuli.slice());
+            } while(
+                previous_order && 
+                JSON.stringify(shuffled.map(s=>s.stimulus)) === 
+                JSON.stringify(previous_order.map(s=>s.stimulus))
+            );
+            return shuffled;
+        }
+
+        var vars = [];
+        var prev_pic_shuffle = null;
+        var prev_word_shuffle = null;
+        for(let r=0; r<repetitions; r++){
+            var pic = shuffleNoRepeat(pictures, prev_pic_shuffle);
+            var wrd = shuffleNoRepeat(words, prev_word_shuffle);
+            prev_pic_shuffle = pic;
+            prev_word_shuffle = wrd;
+            var max_trials = Math.min(pic.length, wrd.length) * 2;
+            for(let i=0;i<max_trials;i++){
+                var stim;
+                //odd trials:picture
+                if(i % 2 == 0){
+                    stim = pic.pop();
+                }
+                //even trials:word
+                else{
+                    stim = wrd.pop();
+                }
+
+            var side;
+            
+            if(left_labels.includes(stim.category)){
+                side = "left";
+            }else{
+                side = "right";
+            }
+            
+            vars.push({
+                stimulus: stim.stimulus,
+                category: stim.category,
+                correct_side: side,
+                left_label: left_labels,
+                right_label: right_labels,
+                block: block_number,
+                stim_type: stim.type
+            });
+        }
+    }
+
+    return {
+        timeline:[iat_trial],
+        timeline_variables: vars,
+        randomize_order:false
+        };
+    };
+
+    //feedback function
+    function blockFeedback(block_num){
+        return {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: function(){
+                // Get only trials from this block
+                var data = jsPsych.data.get().filter({block: block_num});
+
+                // Remove trials with no RT (just in case)
+                var valid = data.filter(function(d){
+                    return d.rt !== null;
+                });
+
+                // Average RT
+                var avg_rt = Math.round(valid.select('rt').mean());
+
+                // Error rate
+                var total = valid.count();
+                var errors = valid.filter({correct: false}).count();
+                var error_rate = total > 0 ? Math.round((errors / total) * 100) : 0;
+
+                return `
+                    <div style="text-align:center;">
+                        <p>Some feedback about your performance.
+                        <p><b>Average Response Time:</b> ${avg_rt} ms</p>
+                        <p><b>Error Rate:</b> ${error_rate}%</p>
+                        <p>Ready for the next block? Press space bar to continue.</p>
+                    </div>
+                `;
+            },
+            choices: [' ']
+        };
+    }
+
+    //Enter participant ID
+    var participant_ID={
+        type:jsPsychSurveyText,
+        questions :[
+            {prompt:`
+                <div style="max-width: 900px; margin: auto; text-align: left; line-height: 1.6;">
+                <p>Enter your participant ID to start the task.</p>`,
+                name: 'ID',
+                required:true
+            }
+        ],
+        on_finish: function(data){
+            participant_input_id = data.response.ID;
+            console.log("Participant entered ID:", participant_input_id);
+        }
+    };
+    timeline.push (participant_ID);
+
+    //Tutorial
+    var tutorial_1= {
+        type:jsPsychHtmlKeyboardResponse,
+        stimulus:`<div style="max-width: 900px; margin: auto; text-align: center; line-height: 1.6;">
+            <p>In the following task, you need to look at words or images that appear in the middle of the screen.</p>
+            <p>You will also see category words at the corners, such as <b>GOOD</b> and <b>BAD</b>.<br>
+            Use <b>e</b> and <b>i</b> keys to match the category.</p>
+            <p><b>Press space bar to see an example. </b></p?
+            </div>`,
+        choices:[" "],
+    };
+    timeline.push (tutorial_1);
+
+    var tutorial_2= {
+        type:jsPsychHtmlKeyboardResponse,
+        stimulus:`<div style="max-width: 600px; margin: auto; text-align: center; line-height: 1.6;">
+            <image src="img/tutorial_image.jpg" style="width:600px;height=auto:">
+            <p>For example, this is an image of a girl. Because "girl" is on the left side of the screen, you press the  <b>e</b> key.</p>
+            <image src="img/tutorial_word.jpg" style="width:600px;height=auto:">
+            <p>For example, the word "grief" is a BAD word, and because "BAD" is on the left side of the screen, you press the <b>i</b> key.</p>
+            <p><b>Press space bar to continue. </b></p>
+            </div>`,
+        choices:[" "],
+    };
+    timeline.push (tutorial_2);
+
+    var tutorial_3= {
+        type:jsPsychHtmlKeyboardResponse,
+        stimulus:`<div style="max-width: 800px; margin: auto; text-align: center; line-height: 1.6;">
+            <image src="img/tutorial_combined.jpg" style="width:600px;height=auto:">
+            <p>Sometimes, you even get four categories on screen. You need to find the category is belongs to. 
+                GOOD and BAD are in capitals, and girl and boy are in small letters. </p>
+            <p>Here you should press <b>e</b> key, because it is an image of a <b>girl</b>. </p>
+            <p> If you press the wrong key, a red X will appear. To continue, you need to press the correct key to continue. For example, if you press <b>i</b>
+                after you see this image of a girl, a red cross will appear. You will need to press <b>e</b> to be able to see the next trial,
+                as this is a picture of a girl and "girl" is on the left side of the screen. 
+            <p><b>Press space bar to continue. </b></p>
+            </div>`,
+        choices:[" "],
+    };
+    timeline.push (tutorial_3);
+
+    var tutorial_4= {
+        type:jsPsychHtmlKeyboardResponse,
+        stimulus:`<div style="max-width: 600px; margin: auto; text-align: center; line-height: 1.6;">
+            <p>Ready for a block? </p>
+            <p><b>Press space bar to start. </b></p>
+            </div>`,
+        choices:[" "],
+    };
+    timeline.push (tutorial_4);
+
+    //Block 1: target, boy on left
+    timeline.push(
+        createIATBlock(targets, ['boy'], ['girl'], 1, 2)
+    );
+    timeline.push(blockFeedback(1));
+
+    //Block 2 : attribute, good on left
+    timeline.push(
+        createIATBlock(attributes, ['GOOD'], ['BAD'], 2, 2)
+    );
+    timeline.push(blockFeedback(2));
+
+    //Block 6 and Block 7 first
+    //Left: boy + GOOD, Right: girl + BAD
+    timeline.push(
+        createAlternatingMixedBlock(targets, attributes, ['boy','GOOD'], ['girl','BAD'], 6, 1)
+    );
+    timeline.push(blockFeedback(6));
+
+    timeline.push(
+        createAlternatingMixedBlock(targets, attributes, ['boy','GOOD'], ['girl','BAD'], 7, 2)
+    );
+    timeline.push(blockFeedback(7));
+
+    //Block 5: reverse block 1
+    timeline.push(
+        createIATBlock(targets, ['girl'], ['boy'], 5, 2)
+    );
+    timeline.push(blockFeedback(5));
+
+    //Block 3 and Blcok 4 second
+    //Left: girl + Good, Right: boy + BAD
+    timeline.push(
+        createAlternatingMixedBlock(targets, attributes, ['girl','GOOD'], ['boy','BAD'], 3, 1)
+    );
+    timeline.push(blockFeedback(3));
+
+    timeline.push(
+        createAlternatingMixedBlock(targets, attributes, ['girl','GOOD'], ['boy','BAD'], 4, 2)
+    );
+    timeline.push(blockFeedback(4));
+
+    var end_instruction= {
+        type:jsPsychHtmlKeyboardResponse,
+        stimulus:`<div style="max-width: 600px; margin: auto; text-align: center; line-height: 1.6;">
+            <p>This is the end. Thank you for your participation. </p>
+            <p><b>Please press space bar to end the study. </b></p>
+            </div>`,
+        choices:[" "],
+    };
+    timeline.push (end_instruction);   
+
+    //Run experiment
+    jsPsych.run(timeline);
+
+  </script>
+</html>
